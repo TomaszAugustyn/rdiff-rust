@@ -5,6 +5,7 @@ use std::io::Result;
 use std::path::Path;
 
 mod opts;
+mod rolling_sum;
 
 const BLOCK_SIZE: u64 = 700;
 
@@ -16,12 +17,8 @@ fn main() {
             println!("unchanged file: {}", s.unchanged_file.display());
             println!("signature file: {}", s.signature_file.display());
             let unchanged_file = open_read_handler(&s.unchanged_file).unwrap();
-            let _signature_file = open_write_handler(&s.signature_file).unwrap();
-
-            // Fallback set to BLOCK_SIZE
-            let _chunk_size = unchanged_file
-                .metadata()
-                .map_or(BLOCK_SIZE, |meta| calculate_chunk_size(meta.len()));
+            let mut signature_file = open_write_handler(&s.signature_file).unwrap();
+            create_signature_file(&unchanged_file, &mut signature_file).unwrap();
         }
         SubCommand::Delta(d) => {
             println!("signature file: {}", d.signature_file.display());
@@ -55,6 +52,16 @@ fn open_write_handler(output_path: &Path) -> Result<Box<File>> {
             Err(err)
         }
     }
+}
+
+fn create_signature_file(input_file: &File, sig_file: &mut File) -> Result<()> {
+    // Fallback set to BLOCK_SIZE
+    let chunk_size = input_file
+        .metadata()
+        .map_or(BLOCK_SIZE, |meta| calculate_chunk_size(meta.len()));
+    let mut buffer = vec![0; chunk_size as usize];
+
+    Ok(())
 }
 
 fn calculate_chunk_size(file_length: u64) -> u64 {
