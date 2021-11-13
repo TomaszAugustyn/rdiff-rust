@@ -34,8 +34,8 @@ impl RollingSum {
             b += (*byte as u32) * (len - (index as u32));
         });
 
-        self.r1 += a % RollingSum::MODULO;
-        self.r2 += b % RollingSum::MODULO;
-        self.l += len;
+        self.r1 = (self.r1 + a) % RollingSum::MODULO;
+        self.r2 = (self.r2 + b) % RollingSum::MODULO;
+        self.l = (self.l + len) % RollingSum::MODULO;
     }
 }
