@@ -21,7 +21,7 @@ impl RollingSum {
     pub fn digest(&self) -> u32 {
         // If we used different modulo, we would have here r = r1 + (r2 * MODULO).
         // Because MODULO is 1 << 16 we can left shift bits also here.
-        self.r2 << 16 + self.r1
+        self.r1 + (self.r2 << 16)
     }
 
     pub fn update(&mut self, buffer: &[u8]) {
