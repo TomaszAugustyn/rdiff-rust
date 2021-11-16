@@ -1,8 +1,10 @@
+use bincode::{deserialize_from, serialize_into};
 use blake2::digest::{Update, VariableOutput};
 use blake2::VarBlake2b;
 use clap::Parser;
 use opts::*;
 use rolling_sum::*;
+use serde::{Deserialize, Serialize};
 use std::cmp;
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -19,7 +21,7 @@ const BLOCK_SIZE: u32 = 700;
 /// to comply with rsync C implementation
 const RS_MAX_STRONG_SUM_LENGTH: usize = 32;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct FileSignature {
     /// Chunk size used to calculate weak and strong signatures
     chunk_size: u32,
@@ -29,7 +31,7 @@ struct FileSignature {
     signature_table: HashMap<u32, Vec<ChunkHash>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct ChunkHash {
     chunk_index: u32,
     strong_hash: [u8; RS_MAX_STRONG_SUM_LENGTH],
@@ -138,14 +140,11 @@ fn create_signature_file(input_file: &File, sig_file: &mut File) -> Result<()> {
         chunk_index += 1;
     }
 
-    // TODO: write signature to file
-    //let mut sig_writer = BufWriter::new(sig_file);
+    // Write serialized signature to file
+    let mut sig_writer = BufWriter::new(sig_file);
+    serialize_into(&mut sig_writer, &signature).unwrap();
 
     Ok(())
-}
-
-fn write_u32(writer: &mut BufWriter<&mut File>, value: u32) -> Result<usize> {
-    writer.write(&value.to_be_bytes())
 }
 
 fn read_file_to_buffer(reader: &mut BufReader<&File>) -> Result<Vec<u8>> {
