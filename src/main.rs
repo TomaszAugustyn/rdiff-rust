@@ -19,6 +19,7 @@ const BLOCK_SIZE: u32 = 700;
 /// to comply with rsync C implementation
 const RS_MAX_STRONG_SUM_LENGTH: usize = 32;
 
+#[derive(Debug)]
 struct FileSignature {
     /// Chunk size used to calculate weak and strong signatures
     chunk_size: u32,
@@ -28,6 +29,7 @@ struct FileSignature {
     signature_table: HashMap<u32, Vec<ChunkHash>>,
 }
 
+#[derive(Debug)]
 struct ChunkHash {
     chunk_index: u32,
     strong_hash: [u8; RS_MAX_STRONG_SUM_LENGTH],
@@ -88,10 +90,9 @@ fn create_signature_file(input_file: &File, sig_file: &mut File) -> Result<()> {
         chunk_size,
         signature_table: HashMap::new(),
     };
-
     let chunk_size = chunk_size as usize;
     let mut input_reader = BufReader::new(input_file);
-    let buffer = read_file_to_buffer(&mut input_reader)?;
+    let mut buffer = read_file_to_buffer(&mut input_reader)?;
     let mut rolling_sum = RollingSum::new();
     let mut chunk_index = 0u32;
 
@@ -133,7 +134,7 @@ fn create_signature_file(input_file: &File, sig_file: &mut File) -> Result<()> {
             break;
         }
         // Prepare buffer for next iteration
-        let buffer = &buffer[chunk_len..];
+        buffer.drain(..chunk_len);
         chunk_index += 1;
     }
 
