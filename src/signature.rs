@@ -37,13 +37,24 @@ pub fn create_signature_file(input_file: &File, sig_file: &mut File) -> Result<(
         .metadata()
         .map_or(BLOCK_SIZE, |meta| calculate_chunk_size(meta.len()));
 
+    let mut input_reader = BufReader::new(input_file);
+    let mut buffer = read_file_to_buffer(&mut input_reader)?;
+
+    let signature = generate_signature(&mut buffer, chunk_size);
+
+    // Write serialized signature to file
+    let mut sig_writer = BufWriter::new(sig_file);
+    serialize_into(&mut sig_writer, &signature).unwrap();
+    Ok(())
+}
+
+pub fn generate_signature(buffer: &mut Vec<u8>, chunk_size: u32) -> FileSignature {
     let mut signature = FileSignature {
         chunk_size,
         signature_table: HashMap::new(),
     };
+
     let chunk_size = chunk_size as usize;
-    let mut input_reader = BufReader::new(input_file);
-    let mut buffer = read_file_to_buffer(&mut input_reader)?;
     let mut rolling_sum = RollingSum::new();
     let mut chunk_index = 0u32;
 
@@ -88,12 +99,7 @@ pub fn create_signature_file(input_file: &File, sig_file: &mut File) -> Result<(
         buffer.drain(..chunk_len);
         chunk_index += 1;
     }
-
-    // Write serialized signature to file
-    let mut sig_writer = BufWriter::new(sig_file);
-    serialize_into(&mut sig_writer, &signature).unwrap();
-
-    Ok(())
+    signature
 }
 
 fn read_file_to_buffer(reader: &mut BufReader<&File>) -> Result<Vec<u8>> {
