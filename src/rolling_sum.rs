@@ -9,6 +9,12 @@ pub struct RollingSum {
     pub l: u32,
 }
 
+impl Default for RollingSum {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RollingSum {
     // In rsync it is 1 << 16 for digesting speed,
     // whereas adler-32 uses 65521 (the largest prime number smaller than 2^16)
