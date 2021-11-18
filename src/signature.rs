@@ -1,4 +1,4 @@
-use super::rolling_sum::RollingSum;
+use super::rolling_sum::chunk_rollsum;
 use bincode::serialize_into;
 use blake2::digest::{Update, VariableOutput};
 use blake2::VarBlake2b;
@@ -7,7 +7,7 @@ use std::cmp;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Read, Result};
+use std::io::{BufReader, BufWriter, Result};
 
 /// Default block size in rsync C implementation
 const BLOCK_SIZE: u32 = 700;
@@ -18,17 +18,23 @@ const RS_MAX_STRONG_SUM_LENGTH: usize = 32;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileSignature {
     /// Chunk size used to calculate weak and strong signatures
-    chunk_size: u32,
+    pub chunk_size: u32,
     /// Key is a weak signature (rsync rolling checksum algorithm)
     /// Value is a vector of all strong hashes together with the index
     /// of their chunk for which weak signature is the same
-    signature_table: HashMap<u32, Vec<ChunkHash>>,
+    pub signature_table: HashMap<u32, Vec<ChunkHash>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChunkHash {
-    chunk_index: u32,
-    strong_hash: [u8; RS_MAX_STRONG_SUM_LENGTH],
+    pub chunk_index: u32,
+    pub strong_hash: [u8; RS_MAX_STRONG_SUM_LENGTH],
+}
+
+impl FileSignature {
+    pub fn chunk_hashes(&self, key: &u32) -> Option<&Vec<ChunkHash>> {
+        self.signature_table.get(key)
+    }
 }
 
 pub fn create_signature_file(input_file: &File, sig_file: &mut File) -> Result<()> {
@@ -38,7 +44,7 @@ pub fn create_signature_file(input_file: &File, sig_file: &mut File) -> Result<(
         .map_or(BLOCK_SIZE, |meta| calculate_chunk_size(meta.len()));
 
     let mut input_reader = BufReader::new(input_file);
-    let mut buffer = read_file_to_buffer(&mut input_reader)?;
+    let mut buffer = super::read_file_to_buffer(&mut input_reader)?;
 
     let signature = generate_signature(&mut buffer, chunk_size);
 
@@ -55,7 +61,6 @@ pub fn generate_signature(buffer: &mut Vec<u8>, chunk_size: u32) -> FileSignatur
     };
 
     let chunk_size = chunk_size as usize;
-    let mut rolling_sum = RollingSum::new();
     let mut chunk_index = 0u32;
 
     loop {
@@ -67,18 +72,11 @@ pub fn generate_signature(buffer: &mut Vec<u8>, chunk_size: u32) -> FileSignatur
             break;
         }
 
-        // Calculate weak signature (using rsync rolling checksum algorithm) from chunk
-        rolling_sum.update(chunk);
-        let weak_hash = rolling_sum.digest();
+        // Calculate weak signature (using rsync rolling checksum algorithm) for chunk
+        let weak_hash = chunk_rollsum(chunk);
 
-        // Calculate strong signature. Use blake2 as MD5 is cryptographically broken:
-        // https://www.kb.cert.org/vuls/id/836068
-        let mut hasher = VarBlake2b::new(RS_MAX_STRONG_SUM_LENGTH).unwrap();
-        hasher.update(&chunk);
-        let mut strong_hash = [0u8; RS_MAX_STRONG_SUM_LENGTH];
-        hasher.finalize_variable(|res| {
-            strong_hash = res.try_into().expect("slice with incorrect length");
-        });
+        // Calculate strong signature (using Blake2b).
+        let strong_hash = chunk_strong_hash(chunk);
 
         // Add entry to signature table
         let chunk_hashes = signature
@@ -102,10 +100,16 @@ pub fn generate_signature(buffer: &mut Vec<u8>, chunk_size: u32) -> FileSignatur
     signature
 }
 
-fn read_file_to_buffer(reader: &mut BufReader<&File>) -> Result<Vec<u8>> {
-    let mut buffer: Vec<u8> = Vec::new();
-    reader.read_to_end(&mut buffer)?;
-    Ok(buffer)
+pub fn chunk_strong_hash(chunk: &[u8]) -> [u8; RS_MAX_STRONG_SUM_LENGTH] {
+    // Use blake2 as MD5 is cryptographically broken:
+    // https://www.kb.cert.org/vuls/id/836068
+    let mut hasher = VarBlake2b::new(RS_MAX_STRONG_SUM_LENGTH).unwrap();
+    hasher.update(&chunk);
+    let mut strong_hash = [0u8; RS_MAX_STRONG_SUM_LENGTH];
+    hasher.finalize_variable(|res| {
+        strong_hash = res.try_into().expect("slice with incorrect length");
+    });
+    strong_hash
 }
 
 fn calculate_chunk_size(file_length: u64) -> u32 {

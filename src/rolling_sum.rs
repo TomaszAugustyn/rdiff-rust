@@ -44,4 +44,18 @@ impl RollingSum {
         self.r2 = (self.r2 + b) % RollingSum::MODULO;
         self.l = (self.l + len) % RollingSum::MODULO;
     }
+
+    pub fn roll_fw(&mut self, prev: u8, next: Option<u8>) {
+        self.r1 = (self.r1 - (prev as u32) + next.map_or(0, u32::from)) % RollingSum::MODULO;
+        self.r2 = (self.r2 - (self.l * (prev as u32)) + self.r1) % RollingSum::MODULO;
+        if next.is_none() {
+            self.l -= 1;
+        }
+    }
+}
+
+pub fn chunk_rollsum(chunk: &[u8]) -> u32 {
+    let mut rolling_sum = RollingSum::new();
+    rolling_sum.update(chunk);
+    rolling_sum.digest()
 }
