@@ -9,10 +9,11 @@ use std::convert::TryInto;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Result};
 
-/// Default block size in rsync C implementation
+// Default block size in rsync C implementation.
+// You can experiment with this value to get more matches for smaller files.
 const BLOCK_SIZE: u32 = 700;
-/// Hasher output length for strong signature (Blake2) need to be 32 bytes (256 bits)
-/// to comply with rsync C implementation
+// Hasher output length for strong signature (Blake2) need to be 32 bytes (256 bits)
+// to comply with rsync C implementation
 const RS_MAX_STRONG_SUM_LENGTH: usize = 32;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -89,8 +90,7 @@ pub fn generate_signature(buffer: &mut Vec<u8>, chunk_size: u32) -> FileSignatur
             strong_hash,
         });
 
-        // It was the last chunk
-        if chunk_len < chunk_size || buffer.len() == chunk_size {
+        if is_chunk_last(chunk_len, buffer.len()) {
             break;
         }
         // Prepare buffer for next iteration
@@ -110,6 +110,10 @@ pub fn chunk_strong_hash(chunk: &[u8]) -> [u8; RS_MAX_STRONG_SUM_LENGTH] {
         strong_hash = res.try_into().expect("slice with incorrect length");
     });
     strong_hash
+}
+
+pub fn is_chunk_last(chunk_len: usize, buf_len: usize) -> bool {
+    chunk_len == buf_len
 }
 
 fn calculate_chunk_size(file_length: u64) -> u32 {
