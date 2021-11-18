@@ -40,16 +40,24 @@ impl RollingSum {
             b += (*byte as u32) * (len - (index as u32));
         });
 
-        self.r1 = (self.r1 + a) % RollingSum::MODULO;
-        self.r2 = (self.r2 + b) % RollingSum::MODULO;
-        self.l = (self.l + len) % RollingSum::MODULO;
+        self.r1 = (self.r1.wrapping_add(a)) % RollingSum::MODULO;
+        self.r2 = (self.r2.wrapping_add(b)) % RollingSum::MODULO;
+        self.l = (self.l.wrapping_add(len)) % RollingSum::MODULO;
     }
 
     pub fn roll_fw(&mut self, prev: u8, next: Option<u8>) {
-        self.r1 = (self.r1 - (prev as u32) + next.map_or(0, u32::from)) % RollingSum::MODULO;
-        self.r2 = (self.r2 - (self.l * (prev as u32)) + self.r1) % RollingSum::MODULO;
+        self.r1 = (self
+            .r1
+            .wrapping_sub(prev as u32)
+            .wrapping_add(next.map_or(0, u32::from)))
+            % RollingSum::MODULO;
+        self.r2 = (self
+            .r2
+            .wrapping_sub(self.l * (prev as u32))
+            .wrapping_add(self.r1))
+            % RollingSum::MODULO;
         if next.is_none() {
-            self.l -= 1;
+            self.l = self.l.wrapping_sub(1);
         }
     }
 }
