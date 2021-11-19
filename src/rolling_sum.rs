@@ -72,3 +72,68 @@ pub fn chunk_rollsum(chunk: &[u8]) -> u32 {
     rolling_sum.update(chunk);
     rolling_sum.digest()
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    pub fn default_constructed() {
+        let rs = RollingSum::new();
+        assert_eq!(rs.l, 0);
+        assert_eq!(rs.r1, 0);
+        assert_eq!(rs.r2, 0);
+        assert_eq!(rs.digest(), 0u32);
+    }
+
+    #[test]
+    pub fn rollsum() {
+        let mut rs = RollingSum::new();
+        rs.update(vec![1, 2, 3, 4].as_slice());
+        assert_eq!(rs.l, 4);
+        assert_eq!(rs.digest(), 1310730);
+
+        // [1, 2, 3, 4, 5, 6, 7, 8]
+        rs.update(vec![5, 6, 7, 8].as_slice());
+        assert_eq!(rs.l, 8);
+        assert_eq!(rs.digest(), 5242916);
+
+        // Test rolling forward
+        //
+        // [2, 3, 4, 5, 6, 7, 8, 9]
+        rs.roll_fw(1, Some(9));
+        assert_eq!(rs.l, 8);
+        assert_eq!(rs.digest(), 7602220);
+
+        // Roll forward more
+        //
+        // [5, 6, 7, 8, 9, 10, 11]
+        rs.roll_fw(2, Some(10));
+        rs.roll_fw(3, Some(11));
+        rs.roll_fw(4, None);
+        assert_eq!(rs.l, 7);
+        assert_eq!(rs.digest(), 13893688);
+    }
+
+    #[test]
+    pub fn update() {
+        let mut rs = RollingSum::new();
+
+        let mut vec: Vec<u8> = Vec::with_capacity(80);
+        for i in 0..vec.capacity() {
+            vec.push(i as u8);
+        }
+
+        rs.update(vec.as_slice());
+        assert_eq!(rs.digest(), 1296567384);
+    }
+
+    #[test]
+    pub fn rollsum_from_chunk() {
+        let mut vec: Vec<u8> = Vec::with_capacity(20);
+        for _ in 0..vec.capacity() {
+            vec.push(5);
+        }
+        assert_eq!(chunk_rollsum(vec.as_slice()), 68812900);
+    }
+}

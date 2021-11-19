@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Result};
+use std::cmp::PartialEq;
 
 /// Enum type representing 2 types of operations
 /// that can be applied to reconstruct modified file
@@ -12,7 +13,7 @@ use std::io::{BufReader, BufWriter, Result};
 /// NoMatch - weak signature doesn't match, it holds vector of non-matching bytes
 ///
 /// Vector of `Operation`s is serialized to delta file
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum Operation {
     Match(u32),
     NoMatch(Vec<u8>),
@@ -117,4 +118,37 @@ fn chunk_hash_matching_weak_n_strong<'a>(
     } else {
         None
     }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    pub fn test_generate_delta() {
+        let sig_path = Path::new("test/signature");
+        let sig_file = super::super::open_read_handler(sig_path).unwrap();
+        let sig_reader = BufReader::new(sig_file);
+
+        let new_file_path = Path::new("test/new");
+        let new_file = super::super::open_read_handler(new_file_path).unwrap();
+        let mut new_file_reader = BufReader::new(&*new_file);
+
+        let mut buffer = super::super::read_file_to_buffer(&mut new_file_reader).unwrap();
+        let signature: FileSignature = deserialize_from(sig_reader).unwrap();
+        let chunk_size = signature.chunk_size;
+
+        let delta = generate_delta(&mut buffer, &signature, chunk_size as usize);
+
+        let expected_delta_path = Path::new("test/delta");
+        let expected_delta_file = super::super::open_read_handler(expected_delta_path).unwrap();
+        let expected_delta_reader = BufReader::new(expected_delta_file);
+
+        let expected_delta: Vec<Operation> = deserialize_from(expected_delta_reader).unwrap();
+
+        assert_eq!(delta, expected_delta);
+    }
+
 }
