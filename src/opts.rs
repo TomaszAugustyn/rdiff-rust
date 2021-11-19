@@ -4,7 +4,7 @@ use std::path::PathBuf;
 /// Compute signature-based file differences
 #[derive(Parser)]
 #[clap(
-    name = "rolling-hash",
+    name = "rdiff-rust",
     version = "0.1.0",
     author = "Tomasz Augustyn <t.augustyn@poczta.fm>"
 )]
@@ -13,6 +13,7 @@ pub struct Opts {
     pub subcmd: SubCommand,
 }
 
+/// Enum representing possible subcommands
 #[derive(Parser)]
 pub enum SubCommand {
     #[clap(version = "0.1.0", author = "Tomasz Augustyn <t.augustyn@poczta.fm>")]

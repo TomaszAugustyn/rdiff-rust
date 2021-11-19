@@ -6,12 +6,19 @@ use std::cmp;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Result};
 
+/// Enum type representing 2 types of operations
+/// that can be applied to reconstruct modified file
+/// Match - the whole chunk matches, it holds chunk index
+/// NoMatch - weak signature doesn't match, it holds vector of non-matching bytes
+///
+/// Vector of `Operation`s is serialized to delta file
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Operation {
     Match(u32),
     NoMatch(Vec<u8>),
 }
 
+/// Creates delta file given signature file and modified file
 pub fn create_delta_file(
     sig_file: &File,
     modified_file: &File,
@@ -31,6 +38,9 @@ pub fn create_delta_file(
     Ok(())
 }
 
+/// Generates delta for given buffer, signature and chunk size
+///
+/// Buffer is consumed
 pub fn generate_delta(
     buffer: &mut Vec<u8>,
     sig: &FileSignature,

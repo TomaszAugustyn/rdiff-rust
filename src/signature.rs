@@ -16,9 +16,10 @@ const BLOCK_SIZE: u32 = 700;
 // to comply with rsync C implementation
 const RS_MAX_STRONG_SUM_LENGTH: usize = 32;
 
+/// Structure representing input file signature
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileSignature {
-    /// Chunk size used to calculate weak and strong signatures
+    /// Chunk size used to calculate weak and strong hashes
     pub chunk_size: u32,
     /// Key is a weak signature (rsync rolling checksum algorithm)
     /// Value is a vector of all strong hashes together with the index
@@ -26,6 +27,7 @@ pub struct FileSignature {
     pub signature_table: HashMap<u32, Vec<ChunkHash>>,
 }
 
+/// Chunk index together with a strong hash
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChunkHash {
     pub chunk_index: u32,
@@ -33,11 +35,16 @@ pub struct ChunkHash {
 }
 
 impl FileSignature {
+    /// Returns `Option` of the vector of corresponding indexes and strong hashes
+    /// that have a weak hash passed as argument
+    ///
+    /// `None` if no results found for provided weak hash
     pub fn chunk_hashes(&self, key: &u32) -> Option<&Vec<ChunkHash>> {
         self.signature_table.get(key)
     }
 }
 
+/// Creates signature file for given input file
 pub fn create_signature_file(input_file: &File, sig_file: &mut File) -> Result<()> {
     // Fallback set to BLOCK_SIZE
     let chunk_size = input_file
@@ -55,6 +62,9 @@ pub fn create_signature_file(input_file: &File, sig_file: &mut File) -> Result<(
     Ok(())
 }
 
+/// Generates signature for given buffer and chunk size
+///
+/// Buffer is consumed
 pub fn generate_signature(buffer: &mut Vec<u8>, chunk_size: u32) -> FileSignature {
     let mut signature = FileSignature {
         chunk_size,
@@ -100,6 +110,7 @@ pub fn generate_signature(buffer: &mut Vec<u8>, chunk_size: u32) -> FileSignatur
     signature
 }
 
+/// Calculates strong hash (Blake2b) for given chunk of data
 pub fn chunk_strong_hash(chunk: &[u8]) -> [u8; RS_MAX_STRONG_SUM_LENGTH] {
     // Use blake2 as MD5 is cryptographically broken:
     // https://www.kb.cert.org/vuls/id/836068
@@ -112,6 +123,8 @@ pub fn chunk_strong_hash(chunk: &[u8]) -> [u8; RS_MAX_STRONG_SUM_LENGTH] {
     strong_hash
 }
 
+/// Check current chunk length against buffer size to indicate
+/// whether current chunk is the last one
 pub fn is_chunk_last(chunk_len: usize, buf_len: usize) -> bool {
     chunk_len == buf_len
 }

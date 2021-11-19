@@ -24,12 +24,14 @@ impl RollingSum {
         Self { r1: 0, r2: 0, l: 0 }
     }
 
+    /// Returns aggregated rolling checksum for current state
     pub fn digest(&self) -> u32 {
         // If we used different modulo, we would have here r = r1 + (r2 * MODULO).
         // Because MODULO is 1 << 16 we can left shift bits also here.
         self.r1 + (self.r2 << 16)
     }
 
+    /// Append a slice of bytes to the current rolling checksum state
     pub fn update(&mut self, buffer: &[u8]) {
         let mut a: u32 = 0;
         let mut b: u32 = 0;
@@ -45,6 +47,8 @@ impl RollingSum {
         self.l = (self.l.wrapping_add(len)) % RollingSum::MODULO;
     }
 
+    /// Roll forward the window. Remove one byte from the beginning
+    /// of the window and add one byte at the end of the window (if provided)
     pub fn roll_fw(&mut self, prev: u8, next: Option<u8>) {
         self.r1 = (self
             .r1
@@ -62,6 +66,7 @@ impl RollingSum {
     }
 }
 
+/// Calculate rolling checksum (weak hash) for given chunk of data
 pub fn chunk_rollsum(chunk: &[u8]) -> u32 {
     let mut rolling_sum = RollingSum::new();
     rolling_sum.update(chunk);
