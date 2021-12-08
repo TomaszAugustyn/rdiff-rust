@@ -41,9 +41,9 @@ fn read_file_to_buffer(reader: &mut BufReader<&File>) -> Result<Vec<u8>> {
     Ok(buffer)
 }
 
-fn open_read_handler(input_path: &Path) -> Result<Box<File>> {
+fn open_read_handler(input_path: &Path) -> Result<File> {
     match File::open(input_path) {
-        Ok(file) => Ok(Box::new(file)),
+        Ok(file) => Ok(file),
         Err(err) => {
             eprintln!(
                 "cannot open file for reading: {:?}, error: {}",
@@ -54,9 +54,9 @@ fn open_read_handler(input_path: &Path) -> Result<Box<File>> {
     }
 }
 
-fn open_write_handler(output_path: &Path) -> Result<Box<File>> {
+fn open_write_handler(output_path: &Path) -> Result<File> {
     match File::create(output_path) {
-        Ok(file) => Ok(Box::new(file)),
+        Ok(file) => Ok(file),
         Err(err) => {
             eprintln!(
                 "cannot open file for writing: {:?}, error: {}",

@@ -130,10 +130,7 @@ mod test {
 
     #[test]
     pub fn rollsum_from_chunk() {
-        let mut vec: Vec<u8> = Vec::with_capacity(20);
-        for _ in 0..vec.capacity() {
-            vec.push(5);
-        }
+        let vec: Vec<u8> = vec![5; 20];
         assert_eq!(chunk_rollsum(vec.as_slice()), 68812900);
     }
 }

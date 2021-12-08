@@ -3,9 +3,9 @@ use super::signature::{chunk_strong_hash, is_chunk_last, ChunkHash, FileSignatur
 use bincode::{deserialize_from, serialize_into};
 use serde::{Deserialize, Serialize};
 use std::cmp;
+use std::cmp::PartialEq;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Result};
-use std::cmp::PartialEq;
 
 /// Enum type representing 2 types of operations
 /// that can be applied to reconstruct modified file
@@ -120,7 +120,6 @@ fn chunk_hash_matching_weak_n_strong<'a>(
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -134,7 +133,7 @@ mod test {
 
         let new_file_path = Path::new("test/new");
         let new_file = super::super::open_read_handler(new_file_path).unwrap();
-        let mut new_file_reader = BufReader::new(&*new_file);
+        let mut new_file_reader = BufReader::new(&new_file);
 
         let mut buffer = super::super::read_file_to_buffer(&mut new_file_reader).unwrap();
         let signature: FileSignature = deserialize_from(sig_reader).unwrap();
@@ -150,5 +149,4 @@ mod test {
 
         assert_eq!(delta, expected_delta);
     }
-
 }
