@@ -1,16 +1,14 @@
 use clap::Parser;
 use delta::create_delta_file;
+use file_ops::{open_read_handler, open_write_handler};
 use opts::*;
 use signature::create_signature_file;
-use std::fs::File;
-use std::io::Result;
-use std::io::{BufReader, Read};
-use std::path::Path;
 
 mod delta;
+mod file_ops;
 mod opts;
-pub mod rolling_sum;
-pub mod signature;
+mod rolling_sum;
+mod signature;
 
 fn main() {
     let opts = Opts::parse();
@@ -31,38 +29,6 @@ fn main() {
             let modified_file = open_read_handler(&d.modified_file).unwrap();
             let mut delta_file = open_write_handler(&d.delta_file).unwrap();
             create_delta_file(&signature_file, &modified_file, &mut delta_file).unwrap();
-        }
-    }
-}
-
-fn read_file_to_buffer(reader: &mut BufReader<&File>) -> Result<Vec<u8>> {
-    let mut buffer: Vec<u8> = Vec::new();
-    reader.read_to_end(&mut buffer)?;
-    Ok(buffer)
-}
-
-fn open_read_handler(input_path: &Path) -> Result<File> {
-    match File::open(input_path) {
-        Ok(file) => Ok(file),
-        Err(err) => {
-            eprintln!(
-                "cannot open file for reading: {:?}, error: {}",
-                input_path, err
-            );
-            Err(err)
-        }
-    }
-}
-
-fn open_write_handler(output_path: &Path) -> Result<File> {
-    match File::create(output_path) {
-        Ok(file) => Ok(file),
-        Err(err) => {
-            eprintln!(
-                "cannot open file for writing: {:?}, error: {}",
-                output_path, err
-            );
-            Err(err)
         }
     }
 }

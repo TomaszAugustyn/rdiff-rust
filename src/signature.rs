@@ -1,4 +1,5 @@
 use super::rolling_sum::chunk_rollsum;
+use crate::file_ops::read_file_to_buffer;
 use bincode::serialize_into;
 use blake2::digest::{Update, VariableOutput};
 use blake2::VarBlake2b;
@@ -52,7 +53,7 @@ pub fn create_signature_file(input_file: &File, sig_file: &mut File) -> Result<(
         .map_or(BLOCK_SIZE, |meta| calculate_chunk_size(meta.len()));
 
     let mut input_reader = BufReader::new(input_file);
-    let mut buffer = super::read_file_to_buffer(&mut input_reader)?;
+    let mut buffer = read_file_to_buffer(&mut input_reader)?;
 
     let signature = generate_signature(&mut buffer, chunk_size);
 

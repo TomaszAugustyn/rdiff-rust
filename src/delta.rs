@@ -1,5 +1,6 @@
 use super::rolling_sum::RollingSum;
 use super::signature::{chunk_strong_hash, is_chunk_last, ChunkHash, FileSignature};
+use crate::file_ops::read_file_to_buffer;
 use bincode::{deserialize_from, serialize_into};
 use serde::{Deserialize, Serialize};
 use std::cmp;
@@ -29,7 +30,7 @@ pub fn create_delta_file(
     let signature: FileSignature = deserialize_from(sig_reader).unwrap();
     let chunk_size = signature.chunk_size as usize;
     let mut mod_file_reader = BufReader::new(modified_file);
-    let mut buffer = super::read_file_to_buffer(&mut mod_file_reader)?;
+    let mut buffer = read_file_to_buffer(&mut mod_file_reader)?;
 
     let delta = generate_delta(&mut buffer, &signature, chunk_size);
 
@@ -123,26 +124,27 @@ fn chunk_hash_matching_weak_n_strong<'a>(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::file_ops::open_read_handler;
     use std::path::Path;
 
     #[test]
     pub fn test_generate_delta() {
         let sig_path = Path::new("test/signature");
-        let sig_file = super::super::open_read_handler(sig_path).unwrap();
+        let sig_file = open_read_handler(sig_path).unwrap();
         let sig_reader = BufReader::new(sig_file);
 
         let new_file_path = Path::new("test/new");
-        let new_file = super::super::open_read_handler(new_file_path).unwrap();
+        let new_file = open_read_handler(new_file_path).unwrap();
         let mut new_file_reader = BufReader::new(&new_file);
 
-        let mut buffer = super::super::read_file_to_buffer(&mut new_file_reader).unwrap();
+        let mut buffer = read_file_to_buffer(&mut new_file_reader).unwrap();
         let signature: FileSignature = deserialize_from(sig_reader).unwrap();
         let chunk_size = signature.chunk_size;
 
         let delta = generate_delta(&mut buffer, &signature, chunk_size as usize);
 
         let expected_delta_path = Path::new("test/delta");
-        let expected_delta_file = super::super::open_read_handler(expected_delta_path).unwrap();
+        let expected_delta_file = open_read_handler(expected_delta_path).unwrap();
         let expected_delta_reader = BufReader::new(expected_delta_file);
 
         let expected_delta: Vec<Operation> = deserialize_from(expected_delta_reader).unwrap();
